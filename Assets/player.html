@@ -1,0 +1,418 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --panel: rgba(16,16,19,.94); --line: rgba(255,255,255,.09); --muted: #9a9aa3; --accent: #1d9bf0; }
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; user-select: none;
+    font: 13px/1.35 "Segoe UI", system-ui, sans-serif; color: #fff; }
+  video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000;
+    opacity: 0; transition: opacity .12s; }
+  video.on { opacity: 1; }
+
+  /* ---- overlays ---- */
+  .fade { opacity: 0; transition: opacity .35s; pointer-events: none; }
+  .fade.show { opacity: 1; }
+  #osd { position: absolute; left: 46px; right: 10px; top: 9px; text-shadow: 0 1px 3px #000, 0 0 8px #000; }
+  #osd .who { font-weight: 600; }
+  #osd .txt { margin-top: 2px; opacity: .9; display: -webkit-box; -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical; overflow: hidden; }
+  #burger { position: absolute; left: 8px; top: 8px; width: 30px; height: 30px; border: 0; border-radius: 8px;
+    background: rgba(0,0,0,.55); color: #fff; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+  #burger.show { pointer-events: auto; }
+  #burger:hover { background: rgba(40,40,46,.85); }
+  #flash { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%;
+    background: rgba(0,0,0,.65); padding: 4px 10px; border-radius: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    text-align: center; padding: 24px; color: #bbb; pointer-events: none; white-space: pre-line; }
+  #bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: rgba(255,255,255,.75);
+    pointer-events: none; }
+  #pz { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 42px;
+    color: rgba(255,255,255,.85); text-shadow: 0 0 12px #000; pointer-events: none; display: none; }
+  #pz.show { display: block; }
+
+  /* ---- fly-out menu ---- */
+  #menu { position: absolute; left: 0; top: 0; bottom: 0; width: min(290px, 88vw); box-sizing: border-box;
+    background: var(--panel); backdrop-filter: blur(12px); border-right: 1px solid var(--line);
+    transform: translateX(-102%); transition: transform .18s ease-out; overflow-y: auto; overflow-x: hidden;
+    padding: 10px 12px 14px; cursor: default; scrollbar-width: thin; }
+  #menu.open { transform: none; box-shadow: 8px 0 30px rgba(0,0,0,.5); }
+  #menu button { font: inherit; color: inherit; cursor: pointer; }
+  .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .hd b { font-size: 14px; letter-spacing: .2px; }
+  .x { background: none; border: 0; font-size: 18px !important; line-height: 1; padding: 2px 6px; color: var(--muted) !important; }
+  .x:hover { color: #fff !important; }
+  .sec { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
+  #q { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.06); color: #fff; font: inherit; outline: none; }
+  #q:focus { border-color: var(--accent); }
+  .seg { display: flex; gap: 4px; margin-top: 6px; }
+  .seg button, .btn { flex: 1; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.04); }
+  .seg button.on { background: var(--accent); border-color: var(--accent); }
+  .btn:hover, .seg button:hover:not(.on), .feed:hover { background: rgba(255,255,255,.1); }
+  #feeds { display: flex; flex-direction: column; gap: 2px; }
+  .feed { text-align: left; padding: 7px 10px; border-radius: 7px; border: 0; background: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed.on { background: rgba(29,155,240,.18); color: #8ecdf8; font-weight: 600; }
+  .link { background: none; border: 0; padding: 6px 10px; color: var(--muted) !important; text-align: left; }
+  .link:hover { color: #fff !important; }
+  #now { padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.04); }
+  #now .who { font-weight: 600; }
+  #now .txt { color: #ccc; margin: 3px 0 6px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  #now .none { color: var(--muted); }
+  .transport { display: flex; gap: 6px; margin-top: 8px; }
+  .transport button { flex: 1; padding: 7px 0; border-radius: 8px; border: 1px solid var(--line);
+    background: rgba(255,255,255,.05); font-size: 15px !important; }
+  .transport button:hover { background: rgba(255,255,255,.12); }
+  .slider { display: grid; grid-template-columns: 62px 1fr 34px; align-items: center; gap: 8px; margin: 6px 0; color: #ddd; }
+  .slider span:last-child { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .tg { display: flex; width: 100%; align-items: center; justify-content: space-between; padding: 6px 2px;
+    background: none; border: 0; text-align: left; }
+  .tg i { width: 30px; height: 17px; border-radius: 9px; background: #44444c; position: relative; transition: background .15s; flex: none; }
+  .tg i::after { content: ""; position: absolute; left: 2px; top: 2px; width: 13px; height: 13px; border-radius: 50%;
+    background: #fff; transition: transform .15s; }
+  .tg.on i { background: var(--accent); }
+  .tg.on i::after { transform: translateX(13px); }
+  .tg small { color: var(--muted); margin-left: 6px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
+  .hint { margin-top: 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<video id="a" playsinline preload="auto"></video>
+<video id="b" playsinline preload="auto"></video>
+<div id="status"></div>
+<div id="osd" class="fade"><div class="who"></div><div class="txt"></div></div>
+<button id="burger" class="fade" title="Menu (S)">&#9776;</button>
+<div id="pz">&#10074;&#10074;</div>
+<div id="flash" class="fade"></div>
+<div id="bar"></div>
+
+<aside id="menu">
+  <div class="hd"><b>GhostFeed</b><button class="x" data-close title="Close (Esc)">&times;</button></div>
+
+  <form id="search">
+    <input id="q" placeholder="Search videos, or @user" autocomplete="off" spellcheck="false">
+    <div class="seg"><button type="button" data-sort="top" class="on">Top</button><button type="button" data-sort="latest">Latest</button></div>
+  </form>
+
+  <div class="sec">Feeds</div>
+  <div id="feeds"></div>
+  <button class="link" data-msg="savePreset">+ Save current feed as preset</button>
+
+  <div class="sec">Now playing</div>
+  <div id="now"></div>
+  <div class="transport">
+    <button data-act="Prev" title="Previous">&#9198;</button>
+    <button data-act="PlayPause" id="pp" title="Play / pause">&#9199;</button>
+    <button data-act="Next" title="Next">&#9197;</button>
+  </div>
+
+  <div class="sec">Playback</div>
+  <label class="slider"><span>Volume</span><input type="range" id="vol" min="0" max="100" step="1"><span id="volv"></span></label>
+  <label class="slider"><span>Opacity</span><input type="range" id="opa" min="10" max="100" step="5"><span id="opav"></span></label>
+  <button class="tg" data-tg="autoplay"><span>Autoplay<small>off = loop</small></span><i></i></button>
+  <button class="tg" data-tg="muted"><span>Mute</span><i></i></button>
+
+  <div class="sec">Window</div>
+  <button class="tg" data-tg="fullscreen"><span>Fullscreen<small>F · dbl-click</small></span><i></i></button>
+  <button class="tg" data-tg="clickThrough"><span>Click-through<small id="cthk"></small></span><i></i></button>
+  <button class="tg" data-tg="fit"><span>Fit window to video</span><i></i></button>
+  <button class="tg" data-tg="topMost"><span>Always on top</span><i></i></button>
+  <div class="grid2">
+    <button class="btn" data-act="Browser">x.com browser</button>
+    <button class="btn" data-act="Refresh">Refresh feed</button>
+    <button class="btn" data-act="Hide">Hide</button>
+    <button class="btn" data-act="Quit">Quit</button>
+  </div>
+  <div class="hint">Click video: play/pause · Double-click / F: fullscreen<br>Drag: move · Wheel: volume · Ctrl+wheel: opacity<br>S or / opens this menu · Esc closes</div>
+</aside>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const post = m => window.chrome.webview.postMessage(m);
+  const A = $('a'), B = $('b'), osd = $('osd'), flashEl = $('flash'), bar = $('bar'), pz = $('pz'),
+        statusEl = $('status'), burger = $('burger'), menu = $('menu'), q = $('q');
+  let cur = A, nxt = B;
+  const state = { volume: 0.8, muted: false, loop: false };
+  let ui = null, sort = 'top';
+  let osdTimer = 0, flashTimer = 0, hasOsd = false;
+
+  // ================================================================ playback
+  const apply = v => { v.volume = state.volume; v.muted = state.muted; v.loop = state.loop; };
+
+  function play(v) {
+    const p = v.play();
+    if (p) p.catch(err => {
+      // Autoplay with sound blocked (shouldn't happen with the host's autoplay flag): fall back to muted.
+      if (err && err.name === 'NotAllowedError' && !v.muted) { v.muted = true; v.play().catch(() => {}); }
+    });
+  }
+
+  function preload(url) {
+    if (!url || nxt.dataset.src === url) return;
+    nxt.dataset.src = url;
+    nxt.muted = true;
+    nxt.src = url;
+    nxt.load();
+  }
+
+  function load(m) {
+    const it = m.item;
+    if (nxt.dataset.src === it.url) { const t = cur; cur = nxt; nxt = t; }
+    else if (cur.dataset.src !== it.url) { cur.dataset.src = it.url; cur.src = it.url; }
+    nxt.pause();
+    nxt.classList.remove('on');
+    cur.poster = it.poster || '';
+    apply(cur);
+    try { cur.currentTime = 0; } catch {}
+    cur.classList.add('on');
+    bar.style.width = '0';
+    statusEl.textContent = '';
+    play(cur);
+    preload(m.next);
+    showOsd(m.osd, it.text);
+  }
+
+  function clearVideo() {
+    for (const v of [A, B]) { v.pause(); v.removeAttribute('src'); delete v.dataset.src; v.load(); v.classList.remove('on'); }
+    hasOsd = false;
+    osd.classList.remove('show');
+    pz.classList.remove('show');
+    bar.style.width = '0';
+  }
+
+  for (const v of [A, B]) {
+    v.addEventListener('ended', () => { if (v === cur) post({ type: 'ended' }); });
+    v.addEventListener('error', () => {
+      if (v === cur && v.dataset.src) post({ type: 'error', code: v.error ? v.error.code : 0 });
+    });
+    v.addEventListener('timeupdate', () => {
+      if (v === cur && v.duration) bar.style.width = (v.currentTime / v.duration * 100) + '%';
+    });
+    v.addEventListener('play', () => {
+      if (v !== cur) return;
+      pz.classList.remove('show'); $('pp').innerHTML = '&#10074;&#10074;';
+      post({ type: 'paused', value: false });
+    });
+    v.addEventListener('pause', () => {
+      if (v !== cur || v.ended) return;
+      pz.classList.add('show'); $('pp').innerHTML = '&#9654;';
+      post({ type: 'paused', value: true });
+    });
+  }
+
+  // ================================================================ overlays
+  function showOsd(who, text) {
+    if (who !== undefined) {
+      osd.querySelector('.who').textContent = who || '';
+      osd.querySelector('.txt').textContent = text || '';
+      hasOsd = true;
+    }
+    burger.classList.add('show');
+    if (hasOsd && !menu.classList.contains('open')) osd.classList.add('show');
+    clearTimeout(osdTimer);
+    osdTimer = setTimeout(() => { osd.classList.remove('show'); burger.classList.remove('show'); }, 3000);
+  }
+
+  function flash(text) {
+    flashEl.textContent = text;
+    flashEl.classList.add('show');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => flashEl.classList.remove('show'), 1600);
+  }
+
+  // ================================================================ fly-out menu
+  const isOpen = () => menu.classList.contains('open');
+
+  function setMenu(open, focusSearch) {
+    if (open === undefined || open === null) open = !isOpen();
+    if (open === isOpen()) { if (open && focusSearch) q.focus(); return; }
+    menu.classList.toggle('open', open);
+    post({ type: 'menuState', open });
+    if (open) {
+      osd.classList.remove('show');
+      render();
+      if (focusSearch) setTimeout(() => q.focus(), 60);
+    } else if (document.activeElement) {
+      document.activeElement.blur();
+    }
+  }
+
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined) e.textContent = text;
+    return e;
+  }
+
+  function render() {
+    if (!ui) return;
+    const feeds = $('feeds');
+    feeds.replaceChildren(...ui.sources.map(s => {
+      const b = el('button', 'feed' + (s.url === ui.source ? ' on' : ''), s.name);
+      b.title = s.url;
+      b.onclick = () => { post({ type: 'source', url: s.url }); setMenu(false); };
+      return b;
+    }));
+    if (!ui.sources.some(s => s.url === ui.source)) {
+      const b = el('button', 'feed on', ui.sourceLabel || ui.source);
+      b.title = ui.source;
+      feeds.appendChild(b);
+    }
+
+    const now = $('now');
+    if (ui.now) {
+      const open = el('button', 'btn', 'Open on X ↗');
+      open.dataset.act = 'OpenTweet';
+      now.replaceChildren(el('div', 'who', `@${ui.now.author}  ·  ${ui.now.pos}`), el('div', 'txt', ui.now.text || ''), open);
+    } else {
+      now.replaceChildren(el('div', 'none', 'Nothing playing yet'));
+    }
+
+    $('vol').value = ui.volume; $('volv').textContent = ui.volume;
+    $('opa').value = ui.opacity; $('opav').textContent = ui.opacity + '%';
+    $('cthk').textContent = ui.clickThroughKey || '';
+    for (const t of menu.querySelectorAll('[data-tg]')) t.classList.toggle('on', !!ui[t.dataset.tg]);
+  }
+
+  const TOGGLES = {
+    autoplay: () => post({ type: 'act', act: 'Autoplay' }),
+    muted: () => post({ type: 'act', act: 'Mute' }),
+    clickThrough: () => post({ type: 'act', act: 'ClickThrough' }),
+    fullscreen: () => post({ type: 'act', act: 'Fullscreen' }),
+    fit: () => post({ type: 'set', key: 'fit', value: !ui.fit }),
+    topMost: () => post({ type: 'set', key: 'topMost', value: !ui.topMost }),
+  };
+
+  menu.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.hasAttribute('data-close')) { setMenu(false); return; }
+    if (t.dataset.sort) {
+      sort = t.dataset.sort;
+      for (const b of menu.querySelectorAll('[data-sort]')) b.classList.toggle('on', b === t);
+      if (q.value.trim()) $('search').requestSubmit();
+      return;
+    }
+    if (t.dataset.tg && ui) { TOGGLES[t.dataset.tg](); return; }
+    if (t.dataset.msg) { post({ type: t.dataset.msg }); return; }
+    if (t.dataset.act) {
+      post({ type: 'act', act: t.dataset.act });
+      if (['Browser', 'Hide', 'Quit', 'OpenTweet'].includes(t.dataset.act)) setMenu(false);
+    }
+  });
+
+  $('search').addEventListener('submit', e => {
+    e.preventDefault();
+    const text = q.value.trim();
+    if (!text) return;
+    post({ type: 'search', q: text, latest: sort === 'latest' });
+    q.blur();
+    setMenu(false);
+  });
+
+  $('vol').addEventListener('input', e => { $('volv').textContent = e.target.value; post({ type: 'set', key: 'volume', value: +e.target.value }); });
+  $('opa').addEventListener('input', e => { $('opav').textContent = e.target.value + '%'; post({ type: 'set', key: 'opacity', value: +e.target.value }); });
+  burger.addEventListener('click', () => setMenu(true));
+
+  // ================================================================ host messages
+  window.chrome.webview.addEventListener('message', e => {
+    const m = e.data;
+    switch (m.cmd) {
+      case 'load': load(m); break;
+      case 'preload': preload(m.url); break;
+      case 'toggle': if (cur.dataset.src) { cur.paused ? play(cur) : cur.pause(); } break;
+      case 'play': if (cur.dataset.src) play(cur); break;
+      case 'pause': cur.pause(); break;
+      case 'seek':
+        if (cur.duration) cur.currentTime = Math.max(0, Math.min(cur.duration - 0.1, cur.currentTime + m.delta));
+        break;
+      case 'state': Object.assign(state, m.state); apply(cur); break;
+      case 'ui': ui = m.state; if (isOpen()) render(); break;
+      case 'menu': setMenu(m.open, m.focus); break;
+      case 'flash': flash(m.text); break;
+      case 'status':
+        if (m.clear) clearVideo();
+        statusEl.textContent = m.text || '';
+        break;
+    }
+  });
+
+  // ================================================================ mouse / keyboard on the video
+  const EDGE = 8;
+  const CURSORS = { 10: 'ew-resize', 11: 'ew-resize', 12: 'ns-resize', 15: 'ns-resize',
+                    13: 'nwse-resize', 17: 'nwse-resize', 14: 'nesw-resize', 16: 'nesw-resize', 2: 'default' };
+  const inUi = t => t && t.closest && t.closest('#menu, #burger');
+
+  function hitTest(x, y) {
+    const w = innerWidth, h = innerHeight;
+    const l = x < EDGE, r = x >= w - EDGE, t = y < EDGE, b = y >= h - EDGE;
+    if (t && l) return 13; if (t && r) return 14; if (b && l) return 16; if (b && r) return 17;
+    if (l) return 10; if (r) return 11; if (t) return 12; if (b) return 15;
+    return 2; // HTCAPTION
+  }
+
+  // A press becomes a window move once the mouse travels a few pixels; otherwise it's a click.
+  // Single click toggles play/pause (after a short wait so a double-click can cancel it).
+  let down = null, clickTimer = 0;
+  document.addEventListener('mousedown', e => {
+    if (e.button !== 0 || inUi(e.target)) return;
+    if (isOpen()) { setMenu(false); down = null; return; }
+    const ht = hitTest(e.clientX, e.clientY);
+    if (ht !== 2) { post({ type: 'drag', ht }); down = null; return; }
+    down = { x: e.screenX, y: e.screenY };
+  });
+  document.addEventListener('mousemove', e => {
+    if (down && (e.buttons & 1)) {
+      if (Math.abs(e.screenX - down.x) + Math.abs(e.screenY - down.y) > 3) { post({ type: 'drag', ht: 2 }); down = null; }
+      return;
+    }
+    if (inUi(e.target)) { document.body.style.cursor = ''; return; }
+    document.body.style.cursor = CURSORS[hitTest(e.clientX, e.clientY)];
+    showOsd();
+  });
+  document.addEventListener('mouseup', e => {
+    if (e.button !== 0 || !down) return;
+    down = null;
+    if (clickTimer) { clearTimeout(clickTimer); clickTimer = 0; post({ type: 'dbl' }); return; }
+    clickTimer = setTimeout(() => { clickTimer = 0; post({ type: 'act', act: 'PlayPause' }); }, 230);
+  });
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    if (!inUi(e.target)) post({ type: 'menu' });
+  });
+  document.addEventListener('wheel', e => {
+    if (inUi(e.target)) return; // let the menu scroll
+    e.preventDefault();
+    post({ type: 'wheel', dy: e.deltaY, ctrl: e.ctrlKey, shift: e.shiftKey });
+  }, { passive: false });
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey && e.altKey) return; // global hotkeys
+    const typing = e.target === q;
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (typing && q.value) q.value = '';
+      else if (isOpen()) setMenu(false);
+      else post({ type: 'key', key: 'Escape', shift: false, ctrl: false }); // host: leave fullscreen
+      return;
+    }
+    if (typing) return;
+    if (e.key === 's' || e.key === 'S' || e.key === '/') { e.preventDefault(); setMenu(true, true); return; }
+    if (e.key === 'Tab') { e.preventDefault(); setMenu(); return; }
+    if (isOpen() && (e.key === ' ' || e.key === 'Enter') && e.target.closest && e.target.closest('#menu button')) return; // activate focused button
+    const repeatable = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
+    if (e.repeat && !repeatable) return;
+    e.preventDefault();
+    post({ type: 'key', key: e.key, shift: e.shiftKey, ctrl: e.ctrlKey });
+  });
+
+  post({ type: 'ready' });
+})();
+</script>
+</body>
+</html>
