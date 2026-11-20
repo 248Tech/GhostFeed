@@ -13,21 +13,58 @@
   /* ---- overlays ---- */
   .fade { opacity: 0; transition: opacity .35s; pointer-events: none; }
   .fade.show { opacity: 1; }
-  #osd { position: absolute; left: 46px; right: 10px; top: 9px; text-shadow: 0 1px 3px #000, 0 0 8px #000; }
-  #osd .who { font-weight: 600; }
-  #osd .txt { margin-top: 2px; opacity: .9; display: -webkit-box; -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical; overflow: hidden; }
-  #burger { position: absolute; left: 8px; top: 8px; width: 30px; height: 30px; border: 0; border-radius: 8px;
-    background: rgba(0,0,0,.55); color: #fff; font-size: 16px; cursor: pointer; display: grid; place-items: center; }
+  /* Frosted "glass" for anything drawn over the video: tinted + blurred, so text reads on any frame
+     while the video stays visible through it. */
+  :root { --glass: rgba(14,14,18,.52); --glass-strong: rgba(14,14,18,.66); --glass-line: rgba(255,255,255,.09);
+          --glass-blur: blur(14px) saturate(150%); }
+  .glass { background: var(--glass); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-line); box-shadow: 0 6px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.05); }
+
+  #osd { position: absolute; left: 46px; top: 8px; width: max-content; max-width: min(520px, calc(100% - 56px));
+    box-sizing: border-box; padding: 6px 11px 7px; border-radius: 11px; transform: translateY(-3px);
+    transition: opacity .35s, transform .35s; }
+  #osd.show { transform: none; }
+  #osd .who { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 12.5px; line-height: 18px; }
+  #osd .who b { font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #osd .who span { color: rgba(255,255,255,.62); font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  #osd .txt { margin-top: 3px; font-size: 13px; line-height: 1.42; color: rgba(255,255,255,.93); letter-spacing: .1px;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+  #osd .txt:empty { display: none; }
+
+  #burger { position: absolute; left: 8px; top: 8px; width: 30px; height: 30px; border-radius: 9px; padding: 0;
+    color: #fff; font-size: 15px; cursor: pointer; display: grid; place-items: center; }
   #burger.show { pointer-events: auto; }
-  #burger:hover { background: rgba(40,40,46,.85); }
+  #burger:hover { background: var(--glass-strong); }
   #flash { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); max-width: 90%;
-    background: rgba(0,0,0,.65); padding: 4px 10px; border-radius: 6px;
+    padding: 5px 13px; border-radius: 999px; font-size: 12.5px; letter-spacing: .1px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
     text-align: center; padding: 24px; color: #bbb; pointer-events: none; white-space: pre-line; }
   #bar { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: rgba(255,255,255,.75);
     pointer-events: none; }
+  /* ---- scrub bar (sits above the 8px bottom resize edge) ---- */
+  #scrub { position: absolute; left: 12px; right: 12px; bottom: 8px; height: 34px; display: none; cursor: pointer; }
+  body.scrub #scrub { display: block; }
+  body.scrub #bar { display: none; }
+  body.scrub #flash { bottom: 50px; }
+  #scrub.show, #scrub.drag { opacity: 1; pointer-events: auto; }
+  #scrub .track { position: absolute; left: 0; right: 0; bottom: 8px; height: 4px; border-radius: 3px;
+    background: rgba(255,255,255,.22); transition: height .1s; box-shadow: 0 0 6px rgba(0,0,0,.5); }
+  #scrub:hover .track, #scrub.drag .track { height: 6px; }
+  #scrub .buf, #scrub .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 3px; }
+  #scrub .buf { background: rgba(255,255,255,.3); }
+  #scrub .fill { background: var(--accent); }
+  #scrub .knob { position: absolute; top: 50%; left: 0; width: 13px; height: 13px; border-radius: 50%; background: #fff;
+    transform: translate(-50%,-50%) scale(0); transition: transform .1s; box-shadow: 0 0 4px rgba(0,0,0,.6); }
+  #scrub:hover .knob, #scrub.drag .knob { transform: translate(-50%,-50%) scale(1); }
+  #scrub .times { position: absolute; left: 0; right: 0; bottom: 17px; display: flex; justify-content: space-between;
+    font-size: 11px; font-variant-numeric: tabular-nums; pointer-events: none; }
+  #scrub .times span { padding: 1px 7px; border-radius: 6px; background: var(--glass);
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur); }
+  #scrub .tip { position: absolute; bottom: 21px; transform: translateX(-50%); padding: 2px 7px; border-radius: 6px;
+    background: var(--glass-strong); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    font-size: 11px; font-variant-numeric: tabular-nums; display: none; pointer-events: none; }
+  #scrub:hover .tip, #scrub.drag .tip { display: block; }
   #pz { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); font-size: 42px;
     color: rgba(255,255,255,.85); text-shadow: 0 0 12px #000; pointer-events: none; display: none; }
   #pz.show { display: block; }
@@ -44,9 +81,24 @@
   .x { background: none; border: 0; font-size: 18px !important; line-height: 1; padding: 2px 6px; color: var(--muted) !important; }
   .x:hover { color: #fff !important; }
   .sec { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
-  #q { width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
-    background: rgba(255,255,255,.06); color: #fff; font: inherit; outline: none; }
-  #q:focus { border-color: var(--accent); }
+  #tagbox { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; padding: 5px 6px; border-radius: 8px;
+    border: 1px solid var(--line); background: rgba(255,255,255,.06); cursor: text; }
+  #tagbox:focus-within { border-color: var(--accent); }
+  #q { flex: 1; min-width: 90px; padding: 3px 4px; border: 0; background: none; color: #fff; font: inherit; outline: none; }
+  .chip { display: inline-flex; align-items: center; gap: 2px; max-width: 100%; padding: 2px 2px 2px 8px; border-radius: 12px;
+    background: rgba(29,155,240,.22); color: #cfe9fc; font-size: 12px; }
+  .chip.neg { background: rgba(244,33,46,.2); color: #fbc4c8; }
+  .chip span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip button { border: 0; background: none; padding: 0 5px; font-size: 14px !important; line-height: 1; opacity: .7; }
+  .chip button:hover { opacity: 1; }
+  .seg .gap { flex: .25; }
+  .go { width: 100%; margin-top: 6px; background: var(--accent) !important; border-color: var(--accent) !important; font-weight: 600; }
+  .go:hover { filter: brightness(1.1); }
+  #recent { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; align-items: center; }
+  #recent:empty { display: none; }
+  #recent small { color: var(--muted); margin-right: 2px; }
+  #recent button { border: 1px solid var(--line); background: none; border-radius: 12px; padding: 1px 8px; font-size: 12px !important; color: #ccc !important; }
+  #recent button:hover { background: rgba(255,255,255,.1); color: #fff !important; }
   .seg { display: flex; gap: 4px; margin-top: 6px; }
   .seg button, .btn { flex: 1; padding: 6px 8px; border-radius: 7px; border: 1px solid var(--line);
     background: rgba(255,255,255,.04); }
@@ -85,18 +137,31 @@
 <video id="a" playsinline preload="auto"></video>
 <video id="b" playsinline preload="auto"></video>
 <div id="status"></div>
-<div id="osd" class="fade"><div class="who"></div><div class="txt"></div></div>
-<button id="burger" class="fade" title="Menu (S)">&#9776;</button>
+<div id="osd" class="fade glass"><div class="who"></div><div class="txt"></div></div>
+<button id="burger" class="fade glass" title="Menu (S)">&#9776;</button>
 <div id="pz">&#10074;&#10074;</div>
-<div id="flash" class="fade"></div>
+<div id="flash" class="fade glass"></div>
 <div id="bar"></div>
+<div id="scrub" class="fade">
+  <div class="times"><span id="tcur">0:00</span><span id="tdur">0:00</span></div>
+  <div class="tip"></div>
+  <div class="track"><div class="buf"></div><div class="fill"></div><div class="knob"></div></div>
+</div>
 
 <aside id="menu">
   <div class="hd"><b>GhostFeed</b><button class="x" data-close title="Close (Esc)">&times;</button></div>
 
   <form id="search">
-    <input id="q" placeholder="Search videos, or @user" autocomplete="off" spellcheck="false">
-    <div class="seg"><button type="button" data-sort="top" class="on">Top</button><button type="button" data-sort="latest">Latest</button></div>
+    <div id="tagbox"><input id="q" placeholder="Add tags: word, #tag, @user, -exclude" autocomplete="off" spellcheck="false"></div>
+    <div class="seg">
+      <button type="button" data-match="any" class="on" title="Videos matching any tag">Any</button>
+      <button type="button" data-match="all" title="Videos matching every tag">All</button>
+      <span class="gap"></span>
+      <button type="button" data-sort="top" class="on">Top</button>
+      <button type="button" data-sort="latest">Latest</button>
+    </div>
+    <button type="submit" class="btn go">Search videos</button>
+    <div id="recent"></div>
   </form>
 
   <div class="sec">Feeds</div>
@@ -116,6 +181,7 @@
   <label class="slider"><span>Opacity</span><input type="range" id="opa" min="10" max="100" step="5"><span id="opav"></span></label>
   <button class="tg" data-tg="autoplay"><span>Autoplay<small>off = loop</small></span><i></i></button>
   <button class="tg" data-tg="muted"><span>Mute</span><i></i></button>
+  <button class="tg" data-tg="scrubber"><span>Scrub bar<small>V</small></span><i></i></button>
 
   <div class="sec">Window</div>
   <button class="tg" data-tg="fullscreen"><span>Fullscreen<small>F · dbl-click</small></span><i></i></button>
@@ -137,8 +203,11 @@
   const post = m => window.chrome.webview.postMessage(m);
   const A = $('a'), B = $('b'), osd = $('osd'), flashEl = $('flash'), bar = $('bar'), pz = $('pz'),
         statusEl = $('status'), burger = $('burger'), menu = $('menu'), q = $('q');
+  const scrub = $('scrub'), sTrack = scrub.querySelector('.track'), sFill = scrub.querySelector('.fill'),
+        sBuf = scrub.querySelector('.buf'), sKnob = scrub.querySelector('.knob'), sTip = scrub.querySelector('.tip');
   let cur = A, nxt = B;
-  const state = { volume: 0.8, muted: false, loop: false };
+  const state = { volume: 0.8, muted: false, loop: false, scrub: true };
+  let scrubbing = false, resumeAfterScrub = false;
   let ui = null, sort = 'top';
   let osdTimer = 0, flashTimer = 0, hasOsd = false;
 
@@ -153,7 +222,9 @@
     });
   }
 
+  let upgrading = false, pendingPreload = null;
   function preload(url) {
+    if (upgrading) { pendingPreload = url; return; } // spare element is busy with an upgrade
     if (!url || nxt.dataset.src === url) return;
     nxt.dataset.src = url;
     nxt.muted = true;
@@ -161,7 +232,63 @@
     nxt.load();
   }
 
+  // Switch the playing clip to another rendition (e.g. higher quality for fullscreen) without restarting:
+  // load it in the spare element, seek to the current position, then swap the two.
+  let upgradeGen = 0;
+  function upgrade(url) {
+    if (!url || cur.dataset.src === url || !cur.dataset.src) return;
+    const gen = ++upgradeGen, target = nxt, from = cur;
+    upgrading = true;
+    pendingPreload = null;
+    const finish = ok => {
+      if (gen !== upgradeGen) return;
+      upgrading = false;
+      const p = pendingPreload; pendingPreload = null;
+      if (p) preload(p);
+      post({ type: ok ? 'upgraded' : 'upgradeFailed' });
+    };
+    const onErr = () => {
+      target.removeEventListener('error', onErr);
+      if (target.dataset.src === url) delete target.dataset.src;
+      finish(false);
+    };
+    target.addEventListener('error', onErr);
+    target.pause();
+    target.classList.remove('on');
+    target.dataset.src = url;
+    target.muted = true;
+    target.loop = false;
+    target.src = url;
+    target.load();
+    const stale = () => gen !== upgradeGen || cur !== from || target.dataset.src !== url;
+    target.addEventListener('loadedmetadata', function onMeta() {
+      target.removeEventListener('loadedmetadata', onMeta);
+      if (stale()) return;
+      target.addEventListener('seeked', function onSeeked() {
+        target.removeEventListener('seeked', onSeeked);
+        if (stale()) return;
+        target.removeEventListener('error', onErr);
+        const wasPaused = from.paused;
+        // Fine-tune to where the old clip is now, then swap.
+        if (!wasPaused && Math.abs(target.currentTime - from.currentTime) > 0.25) target.currentTime = from.currentTime;
+        cur = target; nxt = from;
+        cur.poster = from.poster;
+        apply(cur);
+        cur.classList.add('on');
+        from.classList.remove('on');
+        from.pause();
+        if (!wasPaused) play(cur);
+        paintProgress();
+        finish(true);
+      });
+      target.currentTime = from.currentTime + (from.paused ? 0 : 0.35); // small lead for decode latency
+    });
+  }
+
   function load(m) {
+    upgradeGen++; // cancel any in-flight upgrade
+    upgrading = false;
+    pendingPreload = null;
     const it = m.item;
     if (nxt.dataset.src === it.url) { const t = cur; cur = nxt; nxt = t; }
     else if (cur.dataset.src !== it.url) { cur.dataset.src = it.url; cur.src = it.url; }
@@ -171,7 +298,7 @@
     apply(cur);
     try { cur.currentTime = 0; } catch {}
     cur.classList.add('on');
-    bar.style.width = '0';
+    paintProgress();
     statusEl.textContent = '';
     play(cur);
     preload(m.next);
@@ -191,16 +318,15 @@
     v.addEventListener('error', () => {
       if (v === cur && v.dataset.src) post({ type: 'error', code: v.error ? v.error.code : 0 });
     });
-    v.addEventListener('timeupdate', () => {
-      if (v === cur && v.duration) bar.style.width = (v.currentTime / v.duration * 100) + '%';
-    });
+    for (const ev of ['timeupdate', 'progress', 'durationchange', 'loadedmetadata'])
+      v.addEventListener(ev, () => { if (v === cur && !scrubbing) paintProgress(); });
     v.addEventListener('play', () => {
-      if (v !== cur) return;
+      if (v !== cur || scrubbing) return;
       pz.classList.remove('show'); $('pp').innerHTML = '&#10074;&#10074;';
       post({ type: 'paused', value: false });
     });
     v.addEventListener('pause', () => {
-      if (v !== cur || v.ended) return;
+      if (v !== cur || v.ended || scrubbing) return;
       pz.classList.add('show'); $('pp').innerHTML = '&#9654;';
       post({ type: 'paused', value: true });
     });
@@ -209,15 +335,83 @@
   // ================================================================ overlays
   function showOsd(who, text) {
     if (who !== undefined) {
-      osd.querySelector('.who').textContent = who || '';
-      osd.querySelector('.txt').textContent = text || '';
+      // "@author · 3/27 · GIF" → bold author, muted details.
+      const [author, ...rest] = (who || '').split(' · ');
+      const whoEl = osd.querySelector('.who');
+      whoEl.replaceChildren(el('b', '', author || ''), ...(rest.length ? [el('span', '', rest.join(' · '))] : []));
+      osd.querySelector('.txt').textContent = (text || '').trim();
       hasOsd = true;
     }
     burger.classList.add('show');
+    scrub.classList.add('show');
     if (hasOsd && !menu.classList.contains('open')) osd.classList.add('show');
     clearTimeout(osdTimer);
-    osdTimer = setTimeout(() => { osd.classList.remove('show'); burger.classList.remove('show'); }, 3000);
+    osdTimer = setTimeout(() => {
+      osd.classList.remove('show');
+      burger.classList.remove('show');
+      // Keep the scrub bar up while it's hovered, dragged, or the video is paused.
+      if (!scrubbing && !scrub.matches(':hover') && !cur.paused) scrub.classList.remove('show');
+    }, 3000);
   }
+
+  // ================================================================ scrub bar
+  const fmt = t => {
+    if (!isFinite(t) || t < 0) t = 0;
+    t = Math.floor(t);
+    const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = String(t % 60).padStart(2, '0');
+    return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+  };
+
+  function paintProgress() {
+    const d = cur.duration, t = cur.currentTime || 0;
+    const pct = d ? Math.min(100, t / d * 100) : 0;
+    bar.style.width = sFill.style.width = sKnob.style.left = pct + '%';
+    let buffered = 0;
+    try { if (d && cur.buffered.length) buffered = cur.buffered.end(cur.buffered.length - 1) / d * 100; } catch {}
+    sBuf.style.width = Math.min(100, buffered) + '%';
+    $('tcur').textContent = fmt(t);
+    $('tdur').textContent = fmt(d);
+  }
+
+  const scrubFrac = e => {
+    const r = sTrack.getBoundingClientRect();
+    return Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+  };
+
+  function seekFrac(f) {
+    if (!cur.duration) return;
+    cur.currentTime = f * cur.duration;
+    paintProgress();
+  }
+
+  // preventDefault on pointerdown also suppresses the mouse events that would start a window move / click-pause.
+  scrub.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !cur.duration) return;
+    e.preventDefault();
+    e.stopPropagation();
+    scrubbing = true;
+    resumeAfterScrub = !cur.paused;
+    if (resumeAfterScrub) cur.pause();
+    scrub.setPointerCapture(e.pointerId);
+    scrub.classList.add('drag');
+    seekFrac(scrubFrac(e));
+  });
+  scrub.addEventListener('pointermove', e => {
+    const f = scrubFrac(e);
+    sTip.style.left = (f * 100) + '%';
+    sTip.textContent = fmt(f * (cur.duration || 0));
+    if (scrubbing) seekFrac(f);
+  });
+  const endScrub = e => {
+    if (!scrubbing) return;
+    scrubbing = false;
+    scrub.classList.remove('drag');
+    try { scrub.releasePointerCapture(e.pointerId); } catch {}
+    if (resumeAfterScrub) play(cur);
+    showOsd();
+  };
+  scrub.addEventListener('pointerup', endScrub);
+  scrub.addEventListener('pointercancel', endScrub);
 
   function flash(text) {
     flashEl.textContent = text;
@@ -237,6 +431,7 @@
     if (open) {
       osd.classList.remove('show');
       render();
+      loadSearchFromUi();
       if (focusSearch) setTimeout(() => q.focus(), 60);
     } else if (document.activeElement) {
       document.activeElement.blur();
@@ -285,6 +480,7 @@
     muted: () => post({ type: 'act', act: 'Mute' }),
     clickThrough: () => post({ type: 'act', act: 'ClickThrough' }),
     fullscreen: () => post({ type: 'act', act: 'Fullscreen' }),
+    scrubber: () => post({ type: 'act', act: 'Scrubber' }),
     fit: () => post({ type: 'set', key: 'fit', value: !ui.fit }),
     topMost: () => post({ type: 'set', key: 'topMost', value: !ui.topMost }),
   };
@@ -293,12 +489,8 @@
     const t = e.target.closest('button');
     if (!t) return;
     if (t.hasAttribute('data-close')) { setMenu(false); return; }
-    if (t.dataset.sort) {
-      sort = t.dataset.sort;
-      for (const b of menu.querySelectorAll('[data-sort]')) b.classList.toggle('on', b === t);
-      if (q.value.trim()) $('search').requestSubmit();
-      return;
-    }
+    if (t.dataset.sort) { setSeg('sort', t.dataset.sort); return; }
+    if (t.dataset.match) { setSeg('match', t.dataset.match); return; }
     if (t.dataset.tg && ui) { TOGGLES[t.dataset.tg](); return; }
     if (t.dataset.msg) { post({ type: t.dataset.msg }); return; }
     if (t.dataset.act) {
@@ -307,11 +499,85 @@
     }
   });
 
+  // ---- tag search: chips in #tagbox; Enter/comma adds, Backspace on empty removes, Enter on empty searches
+  let tags = [], match = 'any';
+  const tagbox = $('tagbox');
+
+  function setSeg(kind, value) {
+    if (kind === 'sort') sort = value; else match = value;
+    for (const b of menu.querySelectorAll(`[data-${kind}]`)) b.classList.toggle('on', b.dataset[kind] === value);
+  }
+
+  function addTags(text) {
+    for (let t of text.split(',')) {
+      t = t.trim().replace(/\s+/g, ' ');
+      if (!t || t === '-' || t === '@') continue;
+      if (!tags.some(x => x.toLowerCase() === t.toLowerCase())) tags.push(t);
+    }
+    renderTags();
+  }
+
+  function renderTags() {
+    for (const c of tagbox.querySelectorAll('.chip')) c.remove();
+    tags.forEach((t, i) => {
+      const chip = el('span', 'chip' + (t.startsWith('-') ? ' neg' : ''));
+      chip.title = t.startsWith('-') ? 'Excluded' : t.startsWith('@') ? 'From account' : 'Tag';
+      const x = el('button', '', '×');
+      x.type = 'button';
+      x.title = 'Remove';
+      x.onclick = e => { e.stopPropagation(); tags.splice(i, 1); renderTags(); q.focus(); };
+      chip.append(el('span', '', t), x);
+      tagbox.insertBefore(chip, q);
+    });
+    q.placeholder = tags.length ? 'Add another…' : 'Add tags: word, #tag, @user, -exclude';
+    renderRecent();
+  }
+
+  function renderRecent() {
+    const box = $('recent');
+    const recent = ((ui && ui.recent) || []).filter(r => !tags.some(t => t.toLowerCase() === r.toLowerCase())).slice(0, 10);
+    box.replaceChildren(...(recent.length ? [el('small', '', 'Recent')] : []), ...recent.map(r => {
+      const b = el('button', '', r);
+      b.type = 'button';
+      b.onclick = () => { addTags(r); q.focus(); };
+      return b;
+    }));
+  }
+
+  function loadSearchFromUi() {
+    if (!ui) return;
+    tags = (ui.tags || []).slice();
+    setSeg('match', ui.matchAll ? 'all' : 'any');
+    setSeg('sort', ui.latest ? 'latest' : 'top');
+    q.value = '';
+    renderTags();
+  }
+
+  tagbox.addEventListener('mousedown', e => { if (e.target === tagbox) { e.preventDefault(); q.focus(); } });
+  q.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (q.value.trim()) { addTags(q.value); q.value = ''; }
+      else if (tags.length) $('search').requestSubmit();
+    } else if (e.key === ',') {
+      e.preventDefault();
+      if (q.value.trim()) { addTags(q.value); q.value = ''; }
+    } else if (e.key === 'Backspace' && !q.value && tags.length) {
+      e.preventDefault();
+      tags.pop();
+      renderTags();
+    }
+  });
+  q.addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData).getData('text');
+    if (text.includes(',')) { e.preventDefault(); addTags(text); }
+  });
+
   $('search').addEventListener('submit', e => {
     e.preventDefault();
-    const text = q.value.trim();
-    if (!text) return;
-    post({ type: 'search', q: text, latest: sort === 'latest' });
+    if (q.value.trim()) { addTags(q.value); q.value = ''; }
+    if (!tags.length) { q.focus(); return; }
+    post({ type: 'search', tags, all: match === 'all', latest: sort === 'latest' });
     q.blur();
     setMenu(false);
   });
@@ -326,13 +592,18 @@
     switch (m.cmd) {
       case 'load': load(m); break;
       case 'preload': preload(m.url); break;
+      case 'upgrade': upgrade(m.url); break;
       case 'toggle': if (cur.dataset.src) { cur.paused ? play(cur) : cur.pause(); } break;
       case 'play': if (cur.dataset.src) play(cur); break;
       case 'pause': cur.pause(); break;
       case 'seek':
         if (cur.duration) cur.currentTime = Math.max(0, Math.min(cur.duration - 0.1, cur.currentTime + m.delta));
         break;
-      case 'state': Object.assign(state, m.state); apply(cur); break;
+      case 'state':
+        Object.assign(state, m.state);
+        apply(cur);
+        document.body.classList.toggle('scrub', !!state.scrub);
+        break;
       case 'ui': ui = m.state; if (isOpen()) render(); break;
       case 'menu': setMenu(m.open, m.focus); break;
       case 'flash': flash(m.text); break;
@@ -347,7 +618,7 @@
   const EDGE = 8;
   const CURSORS = { 10: 'ew-resize', 11: 'ew-resize', 12: 'ns-resize', 15: 'ns-resize',
                     13: 'nwse-resize', 17: 'nwse-resize', 14: 'nesw-resize', 16: 'nesw-resize', 2: 'default' };
-  const inUi = t => t && t.closest && t.closest('#menu, #burger');
+  const inUi = t => t && t.closest && t.closest('#menu, #burger, #scrub');
 
   function hitTest(x, y) {
     const w = innerWidth, h = innerHeight;

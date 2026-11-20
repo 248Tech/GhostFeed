@@ -38,9 +38,16 @@ public sealed class Settings
     public int Volume { get; set; } = 80;            // 0..100
     public bool Muted { get; set; } = false;
     public bool Autoplay { get; set; } = true;       // advance on end; off = loop current
-    public int MaxBitrate { get; set; } = 10_400_000; // picks best mp4 variant at or below this
+    public int MaxBitrate { get; set; } = 10_400_000; // windowed: best mp4 variant at or below this
+    public bool FullscreenBest { get; set; } = true;  // fullscreen: always the best variant available (up to 4K)
     public bool IncludeGifs { get; set; } = true;
     public bool SkipAds { get; set; } = true;
+    public bool ShowScrubber { get; set; } = true;   // seek bar on hover
+
+    // Tag search (menu panel)
+    public bool SearchMatchAll { get; set; } = false; // false = any tag, true = every tag
+    public bool SearchLatest { get; set; } = false;
+    public List<string> RecentTags { get; set; } = new();
 
     // Feed
     public string SourceUrl { get; set; } = Feeder.ForYouUrl;
@@ -79,6 +86,7 @@ public sealed class Settings
         [nameof(Act.Quit)] = "Ctrl+Alt+Q",
         [nameof(Act.Menu)] = "Ctrl+Alt+S",
         [nameof(Act.Fullscreen)] = "Ctrl+Alt+F",
+        [nameof(Act.Scrubber)] = "", // unbound by default: Ctrl+Alt+V is Paste Special in Office
     };
 
     public static Settings Load()

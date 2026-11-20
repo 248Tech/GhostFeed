@@ -51,6 +51,7 @@ When the player has focus:
 | `O` | Open post on X |
 | `B` | x.com browser |
 | `F` / `F11` | Fullscreen (`Esc` exits) |
+| `V` | Scrub bar on/off |
 | `T` | Click-through on |
 | `H` | Hide |
 | `R` | Refresh |
@@ -64,16 +65,18 @@ Mouse (when not click-through):
 | Wheel | Volume |
 | Ctrl + wheel | Opacity |
 | Click | Play / pause |
+| Scrub bar (bottom, on hover) | Click or drag to seek; shows elapsed / total time and a tooltip under the cursor |
 | Double-click | Fullscreen on/off |
 | ☰ (top-left, shows on hover) | Menu panel: search, feeds, now playing, transport, volume/opacity, toggles |
 | Right-click | Menu: sources, opacity, quality, autoplay, GIFs, ads, always on top, … |
 
 ## Choosing what plays
 
-- **Menu panel** (☰, `S`, or `Ctrl+Alt+S`): type a search and press Enter (Top/Latest), or `@name` for that account's videos; pick For You, Following, Latest, Popular, Bookmarks or your saved presets. While the panel is open, click-through is paused so you can use it.
+- **Menu panel** (☰, `S`, or `Ctrl+Alt+S`): build a tag search. Type a word, `#hashtag`, `@user` or phrase and press Enter or comma to add it as a chip. Start a tag with `-` to exclude it. **Any** matches videos with any tag, **All** requires every tag; Top/Latest sets the order. Press Enter on an empty box (or *Search videos*) to run it. Recent tags appear below for one-click reuse. A lone `@name` opens that account's Media tab. You can also pick For You, Following, Latest, Popular, Bookmarks or your saved presets. While the panel is open, click-through is paused so you can use it.
 - **Right-click → Source** lists the same presets (For You, Following, Latest videos, Popular videos, Bookmarks), plus *User's videos…*, *Search videos…* and *Custom URL…*. *Save current source as preset…* adds the current source to the list.
 - Or press `Ctrl+Alt+B`, browse to any page on x.com, and press `Ctrl+Alt+B` again. That page becomes the source.
 - X has no URL for the home tabs. *For You* and *Following* load /home, click the tab, and only accept videos from that tab's timeline.
+- **Quality:** the window plays the best version at or below the *Quality (window)* setting (default 1080p). Fullscreen always switches to the best version X has, up to 4K. A clip that is already playing upgrades in place when you enter fullscreen, without restarting. Turn this off with *Quality → Max quality in fullscreen*.
 - **Fit window to video** (on by default) reshapes the window for each video: portrait clips get a tall window, landscape a wide one. The window keeps the same area and stays anchored to its nearest screen corner.
 
 ## How it works

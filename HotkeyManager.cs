@@ -3,7 +3,7 @@ namespace GhostFeed;
 public enum Act
 {
     PlayPause, Next, Prev, SeekForward, SeekBack, Autoplay, Mute, VolumeUp, VolumeDown,
-    ClickThrough, OpacityUp, OpacityDown, Hide, Browser, OpenTweet, Refresh, Quit, Menu, Fullscreen,
+    ClickThrough, OpacityUp, OpacityDown, Hide, Browser, OpenTweet, Refresh, Quit, Menu, Fullscreen, Scrubber,
 }
 
 /// <summary>System-wide hotkeys via RegisterHotKey; they fire even when the window is click-through or unfocused.</summary>

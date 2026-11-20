@@ -26,7 +26,7 @@ sealed class MainForm : Form
     Rectangle _rectBeforeFull;
     bool _wasPlaying, _sourceChangedWhileBrowsing, _autoShownForLogin;
     int _errors;
-    string? _preloadedId;
+    string? _preloadedUrl, _playingUrl;
     DateTime _startedAt = DateTime.UtcNow;
     Rectangle _rectBeforeBrowser;
 
@@ -256,7 +256,7 @@ sealed class MainForm : Form
         }
         if (!_browserVisible) return; // redirects while hidden don't change the source
         _q.ResetUpcoming();
-        _preloadedId = null;
+        _preloadedUrl = null;
         _sourceUrl = url;
         _s.SourceUrl = url;
         _sourceChangedWhileBrowsing = true;
@@ -277,7 +277,7 @@ sealed class MainForm : Form
         _sourceUrl = url;
         _s.SourceUrl = url;
         _q.ResetUpcoming();
-        _preloadedId = null;
+        _preloadedUrl = null;
         _feeder.Navigate(url);
         if (_q.Current is null) Status("Loading feed…");
         PushUi();
@@ -322,12 +322,13 @@ sealed class MainForm : Form
     void Play(VideoItem it)
     {
         var next = _q.PeekNext;
-        _preloadedId = next?.MediaId;
+        _playingUrl = UrlFor(it);
+        _preloadedUrl = next is null ? null : UrlFor(next);
         _player.Send(new
         {
             cmd = "load",
-            item = new { url = it.Url, poster = it.Poster, text = it.Text },
-            next = next?.Url,
+            item = new { url = _playingUrl, poster = it.Poster, text = it.Text },
+            next = _preloadedUrl,
             osd = Headline(it),
         });
         _paused = false;
@@ -339,9 +340,28 @@ sealed class MainForm : Form
     void Preload()
     {
         var next = _q.PeekNext;
-        if (next is null || next.MediaId == _preloadedId) return;
-        _preloadedId = next.MediaId;
-        _player.Send(new { cmd = "preload", url = next.Url });
+        if (next is null) return;
+        string url = UrlFor(next);
+        if (url == _preloadedUrl) return;
+        _preloadedUrl = url;
+        _player.Send(new { cmd = "preload", url });
+    }
+
+    /// <summary>Fullscreen gets the best rendition X has (up to 4K); the window respects the quality cap.</summary>
+    VideoVariant VariantFor(VideoItem it) =>
+        _fullscreen && _s.FullscreenBest ? it.Best : it.VariantFor(_s.MaxBitrate);
+
+    string UrlFor(VideoItem it) => VariantFor(it).Url;
+
+    /// <summary>Swap the playing clip to the rendition the current mode wants, keeping position (no restart).</summary>
+    void UpgradeCurrent()
+    {
+        if (_q.Current is not { } it) return;
+        string url = UrlFor(it);
+        if (url == _playingUrl) return;
+        _playingUrl = url;
+        _preloadedUrl = null; // the page reuses its preload slot for the swap
+        _player.Send(new { cmd = "upgrade", url });
     }
 
     string Headline(VideoItem it) =>
@@ -361,7 +381,7 @@ sealed class MainForm : Form
 
     void PushState()
     {
-        _player.Send(new { cmd = "state", state = new { volume = _s.Volume / 100.0, muted = _s.Muted, loop = !_s.Autoplay } });
+        _player.Send(new { cmd = "state", state = new { volume = _s.Volume / 100.0, muted = _s.Muted, loop = !_s.Autoplay, scrub = _s.ShowScrubber } });
         PushUi();
     }
 
@@ -385,6 +405,13 @@ sealed class MainForm : Form
         _s.Autoplay = !_s.Autoplay;
         PushState();
         Flash(_s.Autoplay ? "Autoplay ON" : "Autoplay OFF — looping current video");
+    }
+
+    void ToggleScrubber()
+    {
+        _s.ShowScrubber = !_s.ShowScrubber;
+        PushState();
+        Flash(_s.ShowScrubber ? "Scrub bar ON" : "Scrub bar OFF");
     }
 
     void SetOpacity(int pct)
@@ -513,6 +540,7 @@ sealed class MainForm : Form
             case Act.Quit: Close(); break;
             case Act.Menu: ToggleMenu(); break;
             case Act.Fullscreen: ToggleFullscreen(); break;
+            case Act.Scrubber: ToggleScrubber(); break;
         }
     }
 
@@ -528,7 +556,7 @@ sealed class MainForm : Form
                 if (_s.Autoplay) PlayNext();
                 break;
             case "error":
-                Log.Info($"playback error on {_q.Current?.Url}");
+                Log.Info($"playback error on {_playingUrl}");
                 if (++_errors >= MaxConsecutiveErrors)
                 {
                     Status("Videos keep failing to load. Check your connection, then press Next.");
@@ -537,6 +565,14 @@ sealed class MainForm : Form
                 }
                 Flash("Skipped a video that failed to load");
                 PlayNext();
+                break;
+            case "upgraded":
+                Preload();
+                break;
+            case "upgradeFailed":
+                Log.Info("quality upgrade failed; staying on current rendition");
+                _playingUrl = null; // let a later fullscreen toggle retry
+                Preload();
                 break;
             case "paused":
                 _paused = m.GetProperty("value").GetBoolean();
@@ -559,7 +595,10 @@ sealed class MainForm : Form
                 Navigate(m.GetProperty("url").GetString() ?? _sourceUrl);
                 break;
             case "search":
-                Search(m.GetProperty("q").GetString() ?? "", m.GetProperty("latest").GetBoolean());
+                Search(
+                    m.GetProperty("tags").EnumerateArray().Select(t => t.GetString() ?? ""),
+                    m.GetProperty("all").GetBoolean(),
+                    m.GetProperty("latest").GetBoolean());
                 break;
             case "set":
                 OnSet(m.GetProperty("key").GetString() ?? "", m.GetProperty("value"));
@@ -605,6 +644,7 @@ sealed class MainForm : Form
             case "r": case "R": RefreshFeed(); break;
             case "f": case "F": case "F11": ToggleFullscreen(); break;
             case "Escape": if (_fullscreen) ToggleFullscreen(); break;
+            case "v": case "V": ToggleScrubber(); break;
             case "t": case "T": SetClickThrough(true); break;
             case "h": case "H": ToggleHidden(); break;
         }
@@ -622,12 +662,21 @@ sealed class MainForm : Form
             _rectBeforeFull = Bounds;
             _fullscreen = true;
             Bounds = Screen.FromRectangle(Bounds).Bounds;
-            Flash("Fullscreen — Esc or F to exit");
+            UpgradeCurrent(); // the page preloads the next clip after the swap ("upgraded")
+            Preload();
+            string q = "";
+            if (_q.Current is { } it)
+            {
+                var v = VariantFor(it);
+                q = " · " + v.Label + (v == it.Best && _s.FullscreenBest ? (it.Best.Label is "4K" or "1440p" or "1080p" ? "" : " (max available)") : "");
+            }
+            Flash($"Fullscreen{q} — Esc or F to exit");
         }
         else
         {
             _fullscreen = false;
             Bounds = _rectBeforeFull;
+            Preload(); // keep the current clip as is; the next one goes back to the window quality
             if (_s.FitToVideo && _q.Current is { } c) FitTo(c.Aspect);
         }
         PushUi();
@@ -647,6 +696,7 @@ sealed class MainForm : Form
     void PushUi()
     {
         var cur = _q.Current;
+        var search = SearchStateFor(_sourceUrl);
         _player.Send(new
         {
             cmd = "ui",
@@ -664,7 +714,12 @@ sealed class MainForm : Form
                 clickThroughKey = Hk(Act.ClickThrough),
                 fit = _s.FitToVideo,
                 topMost = _s.TopMost,
+                tags = search.Tags,
+                matchAll = search.All,
+                latest = search.Latest,
+                recent = _s.RecentTags,
                 fullscreen = _fullscreen,
+                scrubber = _s.ShowScrubber,
             },
         });
     }
@@ -696,16 +751,108 @@ sealed class MainForm : Form
     }
 
     /// <summary>"@name" plays that account's videos; anything else searches X for videos.</summary>
-    void Search(string query, bool latest)
+    /// <summary>
+    /// Search X for videos matching several tags. Any = (a OR b), All = a b. "-word" excludes,
+    /// "@name" means from:name, phrases with spaces are quoted. A lone @name opens that account's Media tab.
+    /// </summary>
+    void Search(IEnumerable<string> tags, bool all, bool latest)
     {
-        query = query.Trim();
-        if (query.Length == 0) return;
-        if (query.StartsWith('@') && !query.Contains(' '))
+        var clean = tags.Select(t => t.Trim()).Where(t => t.Length > 0 && t != "-" && t != "@")
+                        .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (clean.Count == 0) return;
+
+        _s.SearchMatchAll = all;
+        _s.SearchLatest = latest;
+        _s.RecentTags = clean.Concat(_s.RecentTags).Distinct(StringComparer.OrdinalIgnoreCase).Take(14).ToList();
+
+        if (clean.Count == 1 && clean[0].StartsWith('@') && !clean[0].Contains(' '))
         {
-            Navigate($"https://x.com/{Uri.EscapeDataString(query.TrimStart('@'))}/media");
+            Navigate($"https://x.com/{Uri.EscapeDataString(clean[0][1..])}/media");
             return;
         }
-        Navigate($"https://x.com/search?q={Uri.EscapeDataString(query + " filter:native_video")}&src=typed_query&f={(latest ? "live" : "top")}");
+        string q = BuildQuery(clean, all) + " filter:native_video";
+        Navigate($"https://x.com/search?q={Uri.EscapeDataString(q)}&src=typed_query&f={(latest ? "live" : "top")}");
+    }
+
+    /// <summary>
+    /// Tags shown in the menu's tag box: the current feed's own search terms, so adding a tag extends the
+    /// search you're watching instead of replacing it. Non-search feeds start empty.
+    /// </summary>
+    (List<string> Tags, bool All, bool Latest) SearchStateFor(string url)
+    {
+        if (Uri.TryCreate(url, UriKind.Absolute, out var u))
+        {
+            var path = u.AbsolutePath.Trim('/');
+            if (path == "search")
+            {
+                var qs = System.Web.HttpUtility.ParseQueryString(u.Query);
+                var (tags, all) = ParseQuery(qs["q"] ?? "");
+                return (tags, all, qs["f"] == "live");
+            }
+            var parts = path.Split('/');
+            if (parts.Length == 2 && parts[1] == "media" && parts[0].Length > 0)
+                return (new List<string> { "@" + parts[0] }, false, _s.SearchLatest);
+        }
+        return (new List<string>(), _s.SearchMatchAll, _s.SearchLatest);
+    }
+
+    /// <summary>Inverse of <see cref="BuildQuery"/>: "(a OR from:b) -c filter:native_video" → [a, @b, -c], any.</summary>
+    static (List<string> Tags, bool All) ParseQuery(string q)
+    {
+        q = q.Replace("filter:native_video", " ");
+        var tokens = new List<string>();
+        for (int i = 0; i < q.Length;)
+        {
+            char c = q[i];
+            if (char.IsWhiteSpace(c)) { i++; continue; }
+            if (c is '(' or ')') { tokens.Add(c.ToString()); i++; continue; }
+            var sb = new System.Text.StringBuilder();
+            bool quoted = false;
+            while (i < q.Length && (quoted || (!char.IsWhiteSpace(q[i]) && q[i] is not '(' and not ')')))
+            {
+                if (q[i] == '"') quoted = !quoted;
+                sb.Append(q[i++]);
+            }
+            tokens.Add(sb.ToString());
+        }
+
+        static string Untag(string t)
+        {
+            bool neg = t.StartsWith('-');
+            string body = neg ? t[1..] : t;
+            if (body.StartsWith("from:", StringComparison.OrdinalIgnoreCase)) body = "@" + body[5..];
+            body = body.Trim('"');
+            return body.Length == 0 ? "" : (neg ? "-" : "") + body;
+        }
+
+        bool any = tokens.Contains("OR");
+        var tags = tokens.Where(t => t is not "(" and not ")" and not "OR").Select(Untag).Where(t => t.Length > 0).ToList();
+        return (tags, !any && tags.Count(t => !t.StartsWith('-')) > 1);
+    }
+
+    static string BuildQuery(List<string> tags, bool all)
+    {
+        static string Term(string t)
+        {
+            if (t.StartsWith('@') && !t.Contains(' ')) return "from:" + t[1..];
+            if (t.Contains(' ') && !(t.StartsWith('"') && t.EndsWith('"'))) return $"\"{t.Trim('"')}\"";
+            return t;
+        }
+        static string Negative(string t)
+        {
+            var body = t[1..];
+            return "-" + (body.Contains(' ') && !body.StartsWith('"') ? $"\"{body}\"" : body);
+        }
+
+        var include = tags.Where(t => !t.StartsWith('-')).Select(Term).ToList();
+        var exclude = tags.Where(t => t.StartsWith('-')).Select(Negative);
+        string core = include.Count switch
+        {
+            0 => "",
+            1 => include[0],
+            _ => all ? string.Join(" ", include) : "(" + string.Join(" OR ", include) + ")",
+        };
+        return string.Join(" ", new[] { core }.Concat(exclude).Where(s => s.Length > 0));
     }
 
     void SavePreset()
@@ -727,7 +874,13 @@ sealed class MainForm : Form
         if (path == "search")
         {
             var q = System.Web.HttpUtility.ParseQueryString(u.Query)["q"] ?? "";
-            return "Search: " + q.Replace("filter:native_video", "").Trim();
+            q = q.Replace("filter:native_video", "").Trim();
+            if (q.StartsWith('(') && q.Contains(')'))
+            {
+                int close = q.IndexOf(')');
+                q = q[1..close].Replace(" OR ", " | ") + q[(close + 1)..];
+            }
+            return "Search: " + q.Replace("from:", "@").Trim();
         }
         if (path.EndsWith("/media")) return "@" + path[..^"/media".Length] + " videos";
         return path.Length > 0 ? path : url;
@@ -756,6 +909,7 @@ sealed class MainForm : Form
         items.Add(new ToolStripSeparator());
         items.Add(Check("Autoplay (off = loop)", _s.Autoplay, ToggleAutoplay, Act.Autoplay));
         items.Add(Check("Mute", _s.Muted, ToggleMute, Act.Mute));
+        items.Add(Check("Scrub bar", _s.ShowScrubber, ToggleScrubber, Act.Scrubber));
 
         var opacity = new ToolStripMenuItem("Opacity");
         for (int p = 100; p >= 20; p -= 10)
@@ -775,9 +929,15 @@ sealed class MainForm : Form
             PushUi();
         }));
 
-        var quality = new ToolStripMenuItem("Quality (new videos)");
-        foreach (var (name, rate) in new[] { ("Best (1080p)", 10_400_000), ("720p", 2_200_000), ("480p", 950_000), ("Data saver", 300_000) })
-            quality.DropDownItems.Add(Check(name, _s.MaxBitrate == rate, () => _s.MaxBitrate = rate));
+        var quality = new ToolStripMenuItem("Quality (window)");
+        foreach (var (name, rate) in new[] { ("Best available (up to 4K)", int.MaxValue), ("1080p", 10_400_000), ("720p", 2_200_000), ("480p", 950_000), ("Data saver", 300_000) })
+            quality.DropDownItems.Add(Check(name, _s.MaxBitrate == rate, () => { _s.MaxBitrate = rate; Preload(); }));
+        quality.DropDownItems.Add(new ToolStripSeparator());
+        quality.DropDownItems.Add(Check("Max quality in fullscreen", _s.FullscreenBest, () =>
+        {
+            _s.FullscreenBest = !_s.FullscreenBest;
+            if (_fullscreen) { UpgradeCurrent(); Preload(); }
+        }));
         items.Add(quality);
         items.Add(Check("Include GIFs", _s.IncludeGifs, () => _s.IncludeGifs = !_s.IncludeGifs));
         items.Add(Check("Skip ads", _s.SkipAds, () => _s.SkipAds = !_s.SkipAds));
@@ -799,7 +959,7 @@ sealed class MainForm : Form
         sources.DropDownItems.Add(Item("Search videos…", () =>
         {
             var q = InputBox.Show(this, "Search X for videos about:", "");
-            if (!string.IsNullOrWhiteSpace(q)) Search(q, latest: false);
+            if (!string.IsNullOrWhiteSpace(q)) Search(q.Split(','), all: false, latest: false);
         }));
         sources.DropDownItems.Add(Item("Custom URL…", () =>
         {
@@ -826,7 +986,8 @@ sealed class MainForm : Form
     {
         var it = new ToolStripMenuItem(text);
         it.Click += (_, _) => onClick();
-        if (hotkey is { } h) it.ShortcutKeyDisplayString = Hk(h);
+        if (hotkey is { } h && _s.Hotkeys.TryGetValue(h.ToString(), out var combo) && combo.Length > 0)
+            it.ShortcutKeyDisplayString = combo;
         return it;
     }
 
