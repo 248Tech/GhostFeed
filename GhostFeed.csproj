@@ -8,7 +8,13 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <AssemblyName>GhostFeed</AssemblyName>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
+    <ApplicationIcon>Assets/app.ico</ApplicationIcon>
+    <Product>GhostFeed</Product>
+    <Company>248Tech</Company>
+    <Description>X videos as a floating, click-through overlay for Windows</Description>
+    <Copyright>Copyright (c) 2026 248Tech</Copyright>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
     <InvariantGlobalization>true</InvariantGlobalization>
     <MSBuildWarningsAsMessages>MSB3277</MSBuildWarningsAsMessages>

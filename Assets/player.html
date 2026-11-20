@@ -78,6 +78,9 @@
   #menu button { font: inherit; color: inherit; cursor: pointer; }
   .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
   .hd b { font-size: 14px; letter-spacing: .2px; }
+  .brand { display: flex; align-items: center; gap: 7px; }
+  .brand .logo { width: 20px; height: 20px; }
+  .brand small { color: var(--muted); font-size: 11px; margin-left: 1px; }
   .x { background: none; border: 0; font-size: 18px !important; line-height: 1; padding: 2px 6px; color: var(--muted) !important; }
   .x:hover { color: #fff !important; }
   .sec { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); }
@@ -149,7 +152,7 @@
 </div>
 
 <aside id="menu">
-  <div class="hd"><b>GhostFeed</b><button class="x" data-close title="Close (Esc)">&times;</button></div>
+  <div class="hd"><span class="brand"><svg class="logo" viewBox="0 0 256 256" aria-hidden="true"><defs><linearGradient id="lg" x1=".15" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="#7cf2e4"/><stop offset=".55" stop-color="#8fa8ff"/><stop offset="1" stop-color="#b98cff"/></linearGradient><mask id="lm"><rect width="256" height="256" fill="#fff"/><path d="M110 92 L164 124 L110 156 Z" stroke="#000" stroke-width="10" stroke-linejoin="round"/></mask></defs><path mask="url(#lm)" fill="url(#lg)" d="M44 122C44 70 82 32 128 32s84 38 84 90v86c0 9-8 13-15 8l-19-13-20 15c-5 4-11 4-16 0l-14-12-14 12c-5 4-11 4-16 0l-20-15-19 13c-7 5-15 1-15-8z"/></svg><b>GhostFeed</b><small id="ver"></small></span><button class="x" data-close title="Close (Esc)">&times;</button></div>
 
   <form id="search">
     <div id="tagbox"><input id="q" placeholder="Add tags: word, #tag, @user, -exclude" autocomplete="off" spellcheck="false"></div>
@@ -472,6 +475,7 @@
     $('vol').value = ui.volume; $('volv').textContent = ui.volume;
     $('opa').value = ui.opacity; $('opav').textContent = ui.opacity + '%';
     $('cthk').textContent = ui.clickThroughKey || '';
+    $('ver').textContent = ui.version || '';
     for (const t of menu.querySelectorAll('[data-tg]')) t.classList.toggle('on', !!ui[t.dataset.tg]);
   }
 

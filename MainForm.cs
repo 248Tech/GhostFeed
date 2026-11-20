@@ -720,6 +720,7 @@ sealed class MainForm : Form
                 recent = _s.RecentTags,
                 fullscreen = _fullscreen,
                 scrubber = _s.ShowScrubber,
+                version = "v" + (Application.ProductVersion.Split('+')[0]),
             },
         });
     }

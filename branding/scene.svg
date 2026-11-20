@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice">
+  <!-- Synthetic stand-in for a video frame in screenshots (no third-party content). -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b1446"/>
+      <stop offset="0.38" stop-color="#5b2a86"/>
+      <stop offset="0.62" stop-color="#e2557a"/>
+      <stop offset="0.78" stop-color="#ffb26b"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff4d6"/>
+      <stop offset="0.6" stop-color="#ffd27a"/>
+      <stop offset="1" stop-color="#ff9a5a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ff9f73"/>
+      <stop offset="0.35" stop-color="#7a3a7e"/>
+      <stop offset="1" stop-color="#140f2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1920" fill="url(#sky)"/>
+  <g fill="#fff" opacity=".7">
+    <circle cx="140" cy="180" r="2.5"/><circle cx="320" cy="96" r="1.8"/><circle cx="560" cy="210" r="2"/>
+    <circle cx="760" cy="120" r="2.6"/><circle cx="930" cy="260" r="1.6"/><circle cx="240" cy="380" r="1.5"/>
+    <circle cx="860" cy="430" r="1.8"/><circle cx="480" cy="330" r="1.4"/>
+  </g>
+  <circle cx="540" cy="1040" r="260" fill="url(#sun)"/>
+  <path fill="#3a1d5c" d="M0 1060 L160 900 L280 980 L420 820 L560 960 L700 860 L860 990 L1080 880 V1240 H0 Z"/>
+  <path fill="#24133f" d="M0 1140 L120 1050 L260 1120 L380 1010 L520 1110 L640 1040 L780 1130 L920 1050 L1080 1120 V1260 H0 Z"/>
+  <rect y="1230" width="1080" height="690" fill="url(#lake)"/>
+  <g fill="#ffe2a8" opacity=".55">
+    <rect x="420" y="1262" width="240" height="6" rx="3"/><rect x="380" y="1300" width="320" height="5" rx="2.5"/>
+    <rect x="450" y="1340" width="180" height="5" rx="2.5"/><rect x="400" y="1390" width="280" height="4" rx="2"/>
+    <rect x="470" y="1440" width="140" height="4" rx="2"/>
+  </g>
+  <path fill="#0d0a22" d="M0 1560 C200 1520 340 1600 540 1580 C760 1556 900 1610 1080 1570 V1920 H0 Z"/>
+</svg>

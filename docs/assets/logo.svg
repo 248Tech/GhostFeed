@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="GhostFeed">
+  <defs>
+    <linearGradient id="gf-body" x1="0.15" y1="0" x2="0.85" y2="1">
+      <stop offset="0" stop-color="#7cf2e4"/>
+      <stop offset="0.55" stop-color="#8fa8ff"/>
+      <stop offset="1" stop-color="#b98cff"/>
+    </linearGradient>
+    <linearGradient id="gf-shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <mask id="gf-cut">
+      <rect width="256" height="256" fill="#fff"/>
+      <!-- play button cut out of the ghost -->
+      <path d="M110 92 L164 124 L110 156 Z" fill="#000" stroke="#000" stroke-width="10" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <g mask="url(#gf-cut)">
+    <path fill="url(#gf-body)" d="M44 122C44 70 82 32 128 32s84 38 84 90v86c0 9-8 13-15 8l-19-13-20 15c-5 4-11 4-16 0l-14-12-14 12c-5 4-11 4-16 0l-20-15-19 13c-7 5-15 1-15-8z"/>
+    <path fill="url(#gf-shine)" d="M70 92c4-26 26-44 52-46-30 10-44 30-46 54-1 6-7 4-6-8z"/>
+  </g>
+</svg>
